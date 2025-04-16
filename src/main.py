@@ -11,6 +11,17 @@ def main():
     print(test_leaf)
     test_leaf_props = LeafNode("a", "Click me!", {"href": "https://www.google.com"}).to_html()
     print(test_leaf_props)
+    print("\nParent Node Test")
+    test_parent = ParentNode(
+            "p",
+            [
+                LeafNode("b", "Bold text"),
+                LeafNode(None, "Normal text"),
+                LeafNode("i", "italic text"),
+                LeafNode(None, "Normal text"),
+            ],
+        )
+    print(test_parent.to_html())
 
 
 
