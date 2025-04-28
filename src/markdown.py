@@ -65,7 +65,13 @@ def markdown_to_html_node(markdown):
                 children = [text_node_to_html_node(child_text)]
             case BlockType.QUOTE:
                 tag = "blockquote"
-                text = block.lstrip(">")
+                # Split into lines, strip leading '>' from each line, then rejoin
+                lines = block.split("\n")
+                cleaned_lines = []
+                for line in lines:
+                    cleaned_line = line.lstrip("> ")  # Remove '>' and following space
+                    cleaned_lines.append(cleaned_line)
+                text = " ".join(cleaned_lines)  # Join with spaces like paragraphs
                 children = block_to_child_nodes(text)
             case BlockType.LIST:
                 tag = "ul"
@@ -74,8 +80,7 @@ def markdown_to_html_node(markdown):
                 for line in line_list:
                     if line == "":
                         continue
-                    item = line.lstrip(">")
-                    item = item.strip()
+                    item = line.lstrip("-").strip()
                     grandchildren = block_to_child_nodes(item)
                     children.append(ParentNode("li", grandchildren))
             case BlockType.NUM:
@@ -85,8 +90,7 @@ def markdown_to_html_node(markdown):
                 for line in line_list:
                     if line == "":
                         continue
-                    item = line.lstrip(r"\d+\.")
-                    item = item.strip()
+                    item = re.sub(r"^\d+\.\s*", "", line)
                     grandchildren = block_to_child_nodes(item)
                     children.append(ParentNode("li", grandchildren))                
         block_node = ParentNode(tag, children)
@@ -150,14 +154,14 @@ def split_nodes_image(old_nodes):
             image_alt = image[0]
             image_link = image[1]
             sections = original_text.split(f"![{image_alt}]({image_link})", 1)
-            if len(sections) == 2:
+            if len(sections) == 2 and sections[0]:
                 new_nodes.append(TextNode(sections[0], TextType.TEXT))
             new_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
             if i == len(images) and sections[1] != "":
                 new_nodes.append(TextNode(sections[1], TextType.TEXT))
             else:
                 original_text = sections[1]
-            i += 1      
+            i += 1
     return new_nodes
 
 
@@ -173,7 +177,7 @@ def split_nodes_link(old_nodes):
             link_text = link[0]
             link_url = link[1]
             sections = original_text.split(f"[{link_text}]({link_url})", 1)
-            if len(sections) == 2:
+            if len(sections) == 2 and sections[0]:
                 new_nodes.append(TextNode(sections[0], TextType.TEXT))
             new_nodes.append(TextNode(link_text, TextType.LINK, link_url))
             if i == len(links) and sections[1] != "":
@@ -192,4 +196,13 @@ def text_to_textnodes(text):
     nodes = split_nodes_delimiter(nodes, "`", TextType.CODE)
     nodes = split_nodes_image(nodes)
     nodes = split_nodes_link(nodes)
+    nodes = [node for node in nodes if not (node.text_type == TextType.TEXT and node.text == "")]
     return nodes
+
+def extract_title(markdown):
+    if not markdown.startswith("# "):
+        raise Exception("header not found")
+    lines = markdown.split("\n", 1)
+    title = lines[0].lstrip("#")
+    title = title.strip()
+    return title
