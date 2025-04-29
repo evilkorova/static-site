@@ -8,7 +8,7 @@ import os
 
 def main():
     copy_dir("static", "public")
-    generate_page("content/index.md", "template.html", "public/index.html")
+    generate_pages_recursive("content/", "template.html", "public/")
 
 
 def copy_dir(src, dst):
@@ -45,8 +45,6 @@ def generate_page(from_path, template_path, dest_path):
     content = read_file(from_path)
     template = read_file(template_path)
     html_node = markdown_to_html_node(content)
-    #debug remove
-    print(html_node)
     html = html_node.to_html()
     title = extract_title(content)
     template = template.replace("{{ Title }}", title)
@@ -58,6 +56,20 @@ def generate_page(from_path, template_path, dest_path):
     with open(dest_path, "w") as file:
         file.write(template)
 
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    #print(f"generating from {dir_path_content} to: {dest_dir_path}")
+    for path in os.listdir(dir_path_content):
+        src_path = os.path.join(dir_path_content, path)
+        path_split = os.path.splitext(path)
+        if os.path.isfile(src_path) and path_split[1] == ".md":
+            dst_path = os.path.join(dest_dir_path, path_split[0] + ".html")
+            generate_page(src_path, template_path, dst_path)
+        elif os.path.isdir(src_path):
+            dst_path = os.path.join(dest_dir_path, path)
+            #os.mkdir(dst_path)
+            generate_pages_recursive(src_path, template_path, dst_path)
+        else:
+            raise Exception(f"{src_path} is not file or directory")
     
 
 if __name__ == "__main__":
