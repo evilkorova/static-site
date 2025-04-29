@@ -4,11 +4,16 @@ from markdown import *
 from shutil import rmtree
 from shutil import copy
 import os
+import sys
 
 
 def main():
-    copy_dir("static", "public")
-    generate_pages_recursive("content/", "template.html", "public/")
+    if sys.argv[1]:
+        basepath = sys.argv[1]
+    else:
+        basepath = "/"
+    copy_dir("static", "docs")
+    generate_pages_recursive("content/", "template.html", "docs/", basepath)
 
 
 def copy_dir(src, dst):
@@ -40,7 +45,7 @@ def read_file(path):
         text = file.read()
     return text
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath):
     print(f"generating page from {from_path} to {dest_path} using template {template_path}")
     content = read_file(from_path)
     template = read_file(template_path)
@@ -49,6 +54,8 @@ def generate_page(from_path, template_path, dest_path):
     title = extract_title(content)
     template = template.replace("{{ Title }}", title)
     template = template.replace("{{ Content }}", html)
+    template = template.replace('href="/', f'href="{basepath}')
+    template = template.replace('src="/', f'src="{basepath}')
     # check for created directories
     dest_dir = os.path.dirname(dest_path)
     if not os.path.exists(dest_dir):
@@ -56,18 +63,18 @@ def generate_page(from_path, template_path, dest_path):
     with open(dest_path, "w") as file:
         file.write(template)
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath):
     #print(f"generating from {dir_path_content} to: {dest_dir_path}")
     for path in os.listdir(dir_path_content):
         src_path = os.path.join(dir_path_content, path)
         path_split = os.path.splitext(path)
         if os.path.isfile(src_path) and path_split[1] == ".md":
             dst_path = os.path.join(dest_dir_path, path_split[0] + ".html")
-            generate_page(src_path, template_path, dst_path)
+            generate_page(src_path, template_path, dst_path, basepath)
         elif os.path.isdir(src_path):
             dst_path = os.path.join(dest_dir_path, path)
             #os.mkdir(dst_path)
-            generate_pages_recursive(src_path, template_path, dst_path)
+            generate_pages_recursive(src_path, template_path, dst_path, basepath)
         else:
             raise Exception(f"{src_path} is not file or directory")
     
